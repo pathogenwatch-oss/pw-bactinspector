@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import os
+import os, sys
 import argparse
+import pkg_resources
 import textwrap
 from bactinspector.commands import run_check_species, run_closest_match
 
@@ -19,6 +20,11 @@ def is_valid_dir(parser, arg):
         # File exists so return the directory
         return arg
 
+class Version(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(pkg_resources.require("fastadist")[0].version)
+        sys.exit(0)
+
 def parse_arguments():
     description = textwrap.dedent("""
     A module to determine the most probable species based on sequence in fasta files using refseq and Mash (https://mash.readthedocs.io/en/latest/index.html)
@@ -36,8 +42,11 @@ def parse_arguments():
     # parse all arguments
     parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawDescriptionHelpFormatter)
 
+    parser.register('action', 'version', Version)
+    parser.add_argument('-v', '--version', action='version', nargs = 0, help='print out software version')
+
     subparsers = parser.add_subparsers(
-        help='The following commands are available. Type bactinspectorMax <COMMAND> -h for more help on a specific commands',
+        help='The following commands are available. Type bactinspector <COMMAND> -h for more help on a specific commands',
         dest='command'
     )
 
@@ -54,6 +63,7 @@ def parse_arguments():
     check_species_command.add_argument('-p', '--parallel_processes', help='number of processes to run in parallel', default = 1, type = int)
     check_species_command.add_argument('-n', '--num_best_matches', help='number of best matches to return', default = 10, type = int)
     check_species_command.add_argument('-d', '--distance_cutoff', help='mash distance cutoff (default 0.05)', default = 0.05, type = float)
+    check_species_command.add_argument('-s', '--stdout_summary', help='output a summary of the result to STDOUT', action='store_true')
 
     check_species_command.add_argument('-mp', '--mash_path', help='path to the mash executable. If not provided it is assumed mash is in the PATH')
 

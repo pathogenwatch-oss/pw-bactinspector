@@ -1,5 +1,5 @@
 from subprocess import Popen, PIPE
-import os
+import os, re
 def run_command(command_and_arguments, shell = False):
     """
     run a command with subprocess having supplied commands in a list named command_and_arguments
@@ -17,7 +17,7 @@ def get_base_name(filename):
     """
     get the basename for a file without extension
     """
-    return '.'.join(os.path.basename(filename).split('.')[:-1])
+    return '.'.join(os.path.basename(re.sub(r'\.gz$', '', filename)).split('.')[:-1])
 
 def add_new_file_extension(filename, new_extension):
     """

@@ -15,14 +15,14 @@ def run_mash_sketch(file, filetype, output_dir = None, mash_path = ''):
         sketch_file = add_new_file_extension(file, 'msh')
     
     if not os.path.exists(sketch_file) or os.path.getsize(sketch_file) == 0:
-        print('Sketching {0}'.format(get_base_name(file)))
+        sys.stderr.write('Sketching {0}\n'.format(get_base_name(file)))
         if filetype == 'fasta':
             command_and_arguments = [os.path.join(mash_path, 'mash'), 'sketch', file,  '-o', sketch_file]
         else:
             command_and_arguments = [os.path.join(mash_path, 'mash'), 'sketch', '-m', '3', file,  '-o', sketch_file]
         ret_code, out, err = run_command(command_and_arguments)
         if ret_code != 0:
-            print('Error whilst performing mash sketch: {0}'.format(err))
+            sys.stderr.write('Error whilst performing mash sketch: {0}\n'.format(err))
             sys.exit(ret_code)
     return sketch_file
 
@@ -33,7 +33,7 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_matches,
     """
     match_file = add_new_file_extension(sample_sketch, 'best_matches.txt')
     if not os.path.exists(match_file) or os.path.getsize(match_file) == 0:
-        print('Getting best match for {0}'.format(get_base_name(sample_sketch)))
+        sys.stderr.write('Getting best match for {0}\n'.format(get_base_name(sample_sketch)))
 
         command_and_arguments = [os.path.join(mash_path, 'mash'),  'dist', sample_sketch, ref_seq_sketch ]
         ret_code, out, err = run_command(command_and_arguments)

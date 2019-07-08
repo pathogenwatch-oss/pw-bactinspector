@@ -44,7 +44,6 @@ def sample_and_refseq_species_matches(args, num_best_matches):
     # run best match processes in parallel
     all_bacterial_refseq_sketches = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'all_complete_bacteria_refseq.k21s1000.msh')
     sample_matches = pool.starmap(get_best_mash_matches, [(sample_sketch,all_bacterial_refseq_sketches, refseq_species_matches, args.output_dir, mash_path, num_best_matches) for sample_sketch in sketch_files])
-
     return sample_matches, refseq_species_matches
     
 
@@ -66,10 +65,13 @@ def run_check_species(args):
         results['top_hit_shared_hashes'].append(top_hit_shared_hashes)
     
     results_df = pd.DataFrame(results, columns = ['file', 'species', 'percentage', 'top_hit_distance', 'top_hit_p_value', 'top_hit_shared_hashes']).sort_values('species', ascending=True)
+    results_df = results_df.rename(columns = {'percentage' : '%_of_{0}_best_matches=species'.format(args.num_best_matches) })
     now = datetime.datetime.now()
     outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
     results_df.to_csv(outfile, sep = "\t", index = False)
-    print("Results written to {0}".format(outfile))
+    if args.stdout_summary:
+        sys.stdout.write('{0}\n'.format(results_df.to_string(header=False, index=False)))
+    sys.stderr.write("Results written to {0}\n".format(outfile))
 
 def run_closest_match(args):
     # get sample matches and refseq_matches
@@ -94,4 +96,4 @@ def run_closest_match(args):
         size().reset_index(name='count'). \
         sort_values('count', ascending = False). \
         to_csv(outfile, sep = "\t", index = False)
-    print("Results written to {0}".format(outfile))
+    sys.stderr.write("Results written to {0}\n".format(outfile))
