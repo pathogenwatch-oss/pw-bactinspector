@@ -1,0 +1,2 @@
+include bactinspectorMax/data/all_complete_bacteria_refseq.k21s1000.species.tsv
+include bactinspectorMax/data/all_complete_bacteria_refseq.k21s1000.msh
