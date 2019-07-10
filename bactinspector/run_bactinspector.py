@@ -22,7 +22,7 @@ def is_valid_dir(parser, arg):
 
 class Version(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        print(pkg_resources.require("fastadist")[0].version)
+        print(pkg_resources.require("BactInspectorMax")[0].version)
         sys.exit(0)
 
 def parse_arguments():

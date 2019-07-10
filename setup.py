@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='BactInspectorMax',
-    version='0.0.3',
+    version='0.0.4',
     description='Package to investigate mash hits against refseq',
     author='Anthony Underwood',
     author_email='au3@sanger.ac.uk',
