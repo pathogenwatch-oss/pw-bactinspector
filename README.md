@@ -1,4 +1,4 @@
-#Bactinspector
+# Bactinspector
 A package to 
 
 1. determine the most probable species based on sequence in fasta/fastq files using refseq and Mash (https://mash.readthedocs.io/en/latest/index.html)
