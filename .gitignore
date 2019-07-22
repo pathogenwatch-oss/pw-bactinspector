@@ -3,3 +3,5 @@ dist
 *.pyc
 *.egg*
 .vscode
+data_for_creating_species_info
+RUN_TESTS_HERE

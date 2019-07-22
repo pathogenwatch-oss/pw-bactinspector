@@ -1,2 +1,3 @@
 include bactinspector/data/all_complete_bacteria_refseq.k21s1000.species.tsv
 include bactinspector/data/all_complete_bacteria_refseq.k21s1000.msh
+include bactinspector/data/all_complete_bacteria_refseq.k21s1000.species.distance_and_length_metrics.tsv

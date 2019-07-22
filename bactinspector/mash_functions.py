@@ -27,7 +27,7 @@ def run_mash_sketch(file, filetype, output_dir = None, mash_path = ''):
     return sketch_file
 
 
-def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_matches, output_dir = None, mash_path = '', number_of_best_matches = 10):
+def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, output_dir = None, mash_path = '', number_of_best_matches = 10):
     """
     run mash dist sample sketch file vs the ref_seq sketches and return the best matches
     """
@@ -43,7 +43,7 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_matches,
         distances_fh = StringIO(out.decode("utf-8"))
         mash_dists = pd.read_csv(distances_fh, sep = "\t", names = ['query', 'subject', 'distance', 'p-value', 'shared-hashes'])
         # merge with refseq matches for potential filtering
-        mash_dists = mash_dists.merge(refseq_species_matches, left_on = 'subject', right_on = 'filename', how = 'right')
+        mash_dists = mash_dists.merge(refseq_species_info, left_on = 'subject', right_on = 'filename', how = 'right')
         mash_dists = mash_dists.filter(['query', 'subject', 'distance', 'p-value', 'shared-hashes'])
         # sort by distance and output the subjects (match in refseq) 
         matches = mash_dists.sort_values('distance', ascending=True).head(number_of_best_matches)
@@ -51,35 +51,35 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_matches,
 
     return (get_base_name(sample_sketch), matches)
 
-def get_species_match_details(matches, refseq_species_matches):
+def get_species_match_details(matches, refseq_species_info):
     """
-    use pandas to merge best matches  with ref species matches and return the merged data frame
+    use pandas to merge best matches  with ref species info and return the merged data frame
     """
 
     best_match_species_df = matches.merge(
-        refseq_species_matches,
+        refseq_species_info,
             on = ['filename']
     )
     return best_match_species_df
 
 
-def get_most_frequent_species_match(matches, refseq_species_matches, distance_cutoff = 0.05):
+def get_most_frequent_species_match(matches, refseq_species_info, distance_cutoff = 0.05):
     """
-    use pandas to merge best match file with ref species matches and report the most frequent species
+    use pandas to merge best match file with ref species info and report the most frequent species
     return species and count
     """
-    best_match_species_df = get_species_match_details(matches, refseq_species_matches)
+    best_match_species_df = get_species_match_details(matches, refseq_species_info)
     # filter for close matches
     best_match_species_df = best_match_species_df.loc[best_match_species_df['distance'] <= distance_cutoff]
     if len(best_match_species_df) == 0:
         return 'No significant matches', None, None, None, None, None
     else:
         # get most frequent species and count
-        most_frequent_species_name = best_match_species_df['organism_name'].value_counts().index[0]
-        most_frequent_species_count = best_match_species_df['organism_name'].value_counts()[0]
+        most_frequent_species_name = best_match_species_df['curated_organism_name'].value_counts().index[0]
+        most_frequent_species_count = best_match_species_df['curated_organism_name'].value_counts()[0]
 
         # get top hit of the most frequent species as measured by distance
-        top_hit = best_match_species_df.loc[best_match_species_df['organism_name'] == most_frequent_species_name].sort_values('distance').iloc[0,:]
+        top_hit = best_match_species_df.loc[best_match_species_df['curated_organism_name'] == most_frequent_species_name].sort_values('distance').iloc[0,:]
         return (most_frequent_species_name,
             most_frequent_species_count,
             len(best_match_species_df),

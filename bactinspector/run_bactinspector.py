@@ -3,7 +3,7 @@ import os, sys
 import argparse
 import pkg_resources
 import textwrap
-from bactinspector.commands import run_check_species, run_closest_match
+from bactinspector.commands import run_check_species, run_closest_match, run_create_species_info
 
 
 def is_valid_file(parser, arg):
@@ -38,6 +38,9 @@ def parse_arguments():
       • By default the top 10 matches will be used. Change this with -n
       • Speed things up by changing the number of parallel processes to match the cores on your computer using -p
       • If mash is not in your PATH specify the directory containing the mash executable with -mp
+
+    If you want to update the genomes used, follow the instructions on https://gitlab.com/antunderwood/bactinspector/wikis/Updating-the-genomes-in-BactInspector
+    and use the create_species_info command to make the required file
     """)
     # parse all arguments
     parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -64,6 +67,7 @@ def parse_arguments():
     check_species_command.add_argument('-n', '--num_best_matches', help='number of best matches to return', default = 10, type = int)
     check_species_command.add_argument('-d', '--distance_cutoff', help='mash distance cutoff (default 0.05)', default = 0.05, type = float)
     check_species_command.add_argument('-s', '--stdout_summary', help='output a summary of the result to STDOUT', action='store_true')
+    check_species_command.add_argument('-l', '--local_mash_and_info_file_prefix', help='the path prefix to the mash sketch file and corresponding info file')
 
     check_species_command.add_argument('-mp', '--mash_path', help='path to the mash executable. If not provided it is assumed mash is in the PATH')
 
@@ -83,6 +87,7 @@ def parse_arguments():
     closest_match_command.add_argument('-o', '--output_dir', help='path to output_directory', type=lambda x: is_valid_dir(parser, x),  default = '.')
     closest_match_command.add_argument('-p', '--parallel_processes', help='number of processes to run in parallel', default = 1, type = int)
     closest_match_command.add_argument('-r', '--ref_and_rep_only', help='only include reference and representative sequences', action='store_true')
+    closest_match_command.add_argument('-l', '--local_mash_and_info_file_prefix', help='the path prefix to the mash sketch file and corresponding info file')
 
     closest_match_command.add_argument('-mp', '--mash_path', help='path to the mash executable. If not provided it is assumed mash is in the PATH')
 
@@ -91,6 +96,38 @@ def parse_arguments():
     filetype_extension.add_argument('-fq', '--fastq_file_pattern', help='pattern to match fastq files e.g "*.fastq.gz"')
     filetype_extension.add_argument('-m', '--mash_sketch_file_pattern', help='pattern to match mash sketch files e.g "*.msh"')
 
+    # make make species_info sub command
+    create_species_info_command = subparsers.add_parser('create_species_info',
+        help='Create species info TSV for locally created mash sketches'
+    )
+    create_species_info_command.add_argument(
+        '-m',
+        '--mash_info_file',
+        help='path to info file created using mash info -t',
+        type=lambda x: is_valid_file(parser, x),
+        required = True
+    )
+    create_species_info_command.add_argument(
+        '-r',
+        '--refseq_summary_file',
+        help='path to refseq assembly summary file downloaded via wget ftp://ftp.ncbi.nlm.nih.gov/genomes/refseq/bacteria/assembly_summary.txt',
+        type=lambda x: is_valid_file(parser, x),
+        required = True
+    )
+    create_species_info_command.add_argument(
+        '-b',
+        '--bacsort_species_file',
+        help='path to bacsort_species_definitions.txt',
+        type=lambda x: is_valid_file(parser, x),
+        required = True
+    )
+    create_species_info_command.add_argument(
+        '-x',
+        '--bacsort_excluded_assemblies_file',
+        help='path to bacsort_excluded_assemblies.txt',
+        type=lambda x: is_valid_file(parser, x),
+        required = True
+    )
 
     args = parser.parse_args()
     return args
@@ -101,6 +138,8 @@ def choose_command(args):
         run_check_species(args)
     elif args.command == 'closest_match':
         run_closest_match(args)
+    elif args.command == 'create_species_info':
+        run_create_species_info(args)
 
 def main():
     args = parse_arguments()

@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='BactInspectorMax',
-    version='0.0.4',
+    version='0.0.6',
     description='Package to investigate mash hits against refseq',
     author='Anthony Underwood',
     author_email='au3@sanger.ac.uk',
@@ -14,7 +14,7 @@ setuptools.setup(
             'bactinspector = bactinspector.run_bactinspector:main'
         ]
     },
-    install_requires=['pandas'],
+    install_requires=['pandas', 'numpy'],
     test_suite='nose.collector',
     tests_require=['nose'],
     classifiers=[ 
