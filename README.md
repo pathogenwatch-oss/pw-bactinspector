@@ -11,6 +11,9 @@ created and bundled into the package. This required a special request to increas
 hence the Max.
 The command is still `bactinspector <sub command>` however.
 
+## Dependencies
+[Mash](https://github.com/marbl/Mash/) (> v2.1)
+Installation with conda is recommended
 
 ## Installation
 pip3 install bactinspectorMax
