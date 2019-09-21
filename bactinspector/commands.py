@@ -55,7 +55,7 @@ def run_check_species(args):
         results['file'].append(filename)
         results['species'].append(species)
         if species == 'No significant matches':
-            results['percentage'].append('NA')
+            results['percentage'].append(np.NAN)
         else:
             results['percentage'].append(int(most_frequent_species_count/count*100))
         results['top_hit_distance'].append(top_hit_distance)
@@ -67,7 +67,7 @@ def run_check_species(args):
     results_df = results_df.rename(columns = {'percentage' : '%_of_{0}_best_matches=species'.format(args.num_best_matches) })
 
     refseq_species_metrics_df = create_refseq_species_metrics_df()
-    results_df = results_df.merge(refseq_species_metrics_df, on = 'species')
+    results_df = results_df.merge(refseq_species_metrics_df, on = 'species', how = 'left')
 
     # get df with final result quality of 'good' or 'uncertain'
     results_df = add_certainty_to_merged_results_df(results_df)

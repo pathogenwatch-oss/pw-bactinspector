@@ -44,16 +44,20 @@ def create_refseq_species_metrics_df():
     return refseq_species_metrics_df
 
 
-def add_certainty_to_merged_results_df(results_df, distance_threshold_extension = 1.1):
+def add_certainty_to_merged_results_df(results_df, distance_threshold_extension = 1.1, num_best_matches = 10):
     results_df['result'] = np.where(
         (results_df['max_distance'] == 0 ) |
+        (results_df['max_distance'].isna()  & results_df['top_hit_distance'] > 0.05) |
         (results_df['top_hit_distance'] > results_df['adjusted_max_distance'] * distance_threshold_extension) |
-        (results_df['%_of_10_best_matches=species'] < 60), 'uncertain', 'good'
+        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)].isna()) |
+        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)] < 60),
+        'uncertain', 'good'
     )
 
     # convert lengths to int
-    results_df['max_length'] = results_df['max_length'].astype(int)
-    results_df['min_length'] = results_df['min_length'].astype(int)
+    results_df['max_length'] = pd.to_numeric(results_df['max_length'], errors = 'ignore', downcast='integer')
+    results_df['min_length'] = pd.to_numeric(results_df['min_length'], errors = 'ignore', downcast='integer')
+
     # rename lengths
     results_df = results_df.rename(
         columns = {
