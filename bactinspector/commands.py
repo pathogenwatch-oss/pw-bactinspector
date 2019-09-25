@@ -70,7 +70,7 @@ def run_check_species(args):
     results_df = results_df.merge(refseq_species_metrics_df, on = 'species', how = 'left')
 
     # get df with final result quality of 'good' or 'uncertain'
-    results_df = add_certainty_to_merged_results_df(results_df)
+    results_df = add_certainty_to_merged_results_df(results_df, num_best_matches = args.num_best_matches)
 
     now = datetime.datetime.now()
     outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
