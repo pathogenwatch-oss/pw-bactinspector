@@ -62,7 +62,7 @@ def add_certainty_to_merged_results_df(results_df, distance_threshold_extension 
     results_df = results_df.rename(
         columns = {
             'max_length' : 'maximum_genome_length',
-            'min_length' : 'minimmum_genome_length'
+            'min_length' : 'minimum_genome_length'
         }
     )
     # drop columns no longer required
