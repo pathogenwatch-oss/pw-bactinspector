@@ -50,7 +50,7 @@ def add_certainty_to_merged_results_df(results_df, distance_threshold_extension 
         (results_df['max_distance'].isna()  & results_df['top_hit_distance'] > 0.05) |
         (results_df['top_hit_distance'] > results_df['adjusted_max_distance'] * distance_threshold_extension) |
         (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)].isna()) |
-        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)] * num_best_matches / results_df['num_genomes'] < 60),
+        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)] * num_best_matches / np.minimum(num_best_matches, results_df['num_genomes']) < 60),
         'uncertain', 'good'
     )
 
