@@ -70,7 +70,11 @@ def run_check_species(args):
     results_df = results_df.merge(refseq_species_metrics_df, on = 'species', how = 'left')
 
     # get df with final result quality of 'good' or 'uncertain'
-    results_df = add_certainty_to_merged_results_df(results_df, num_best_matches = args.num_best_matches)
+    results_df = add_certainty_to_merged_results_df(results_df,
+                                                    num_best_matches = args.num_best_matches,
+                                                    allowed_variance = args.allowed_variance,
+                                                    allowed_variance_rarer_species = args.allowed_variance_rarer_species
+                                                    )
 
     now = datetime.datetime.now()
     outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
@@ -195,5 +199,18 @@ def run_create_species_info(args):
 
     # write out file
     merged_with_bacsort.to_csv(os.path.join(os.path.dirname(args.mash_info_file), 'all_complete_bacteria_refseq.k21s1000.species.tsv'), sep = "\t", index = False)
+
+def run_info(search_term, data_source):
+    if data_source == 'summary':
+        info_df = create_refseq_species_metrics_df()
+        search_field = 'species'
+    elif data_source == 'individual_records':
+        info_df = create_refseq_species_info_df(None)
+        search_field = 'curated_organism_name'
+
+    search_results_df = info_df.loc[info_df[search_field].str.contains(search_term, case=False)]
+    # print df to screen
+    pd.set_option('display.max_columns', None)
+    print(search_results_df.to_string(index=False))
 
 

@@ -44,15 +44,28 @@ def create_refseq_species_metrics_df():
     return refseq_species_metrics_df
 
 
-def add_certainty_to_merged_results_df(results_df, distance_threshold_extension = 1.1, num_best_matches = 10):
+def add_certainty_to_merged_results_df(results_df,
+                                        num_best_matches = 10,
+                                        allowed_variance = 0.1,
+                                        allowed_variance_rarer_species = 0.5
+                                        ):
+    # ====== use following tests ======
+    # if max_distance is 0 use 0.05 as cutoff
+    # if no max_distance  use 0.05 as cutoff
+    # compare with max distance + allowed_variance_rarer_species if species has < 10 genomes
+    # compare with max distance + allowed_variance_rarer_species if species has >= 10 genomes
+    # if no matches
+    # if percentage of top 10 hits (normalised for number genomes)
     results_df['result'] = np.where(
-        (results_df['max_distance'] == 0 ) |
-        (results_df['max_distance'].isna()  & results_df['top_hit_distance'] > 0.05) |
-        (results_df['top_hit_distance'] > results_df['adjusted_max_distance'] * distance_threshold_extension) |
-        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)].isna()) |
-        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)] * num_best_matches / np.minimum(num_best_matches, results_df['num_genomes']) < 60),
+        ((results_df['max_distance'] == 0)  & (results_df['top_hit_distance'] > 0.05)) | 
+        (results_df['max_distance'].isna()  & results_df['top_hit_distance'] > 0.05) | 
+        ((results_df['num_genomes'] < 10) & (results_df['top_hit_distance'] > results_df['adjusted_max_distance'] * (1 + allowed_variance_rarer_species))) | 
+        ((results_df['num_genomes'] >= 10) & (results_df['top_hit_distance'] > results_df['adjusted_max_distance'] * (1 + allowed_variance))) | 
+        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)].isna()) | 
+        (results_df['%_of_{0}_best_matches=species'.format(num_best_matches)] * num_best_matches / np.minimum(num_best_matches, results_df['num_genomes']) < 60), 
         'uncertain', 'good'
     )
+    # ==================================
 
     # convert lengths to int
     results_df['max_length'] = pd.to_numeric(results_df['max_length'], errors = 'ignore', downcast='integer')
