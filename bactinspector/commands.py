@@ -49,11 +49,13 @@ def run_check_species(args):
     # get sample matches and refseq_matches
     all_sample_matches, refseq_species_info = sample_and_refseq_species_info(args, args.num_best_matches)
         
-    results = {'file': [], 'species': [], 'percentage': [], 'top_hit_distance': [], 'top_hit_p_value': [], 'top_hit_shared_hashes': []}
+    results = {'file': [], 'species': [], 'species_taxid': [], 'strain_taxid': [], 'percentage': [], 'top_hit_distance': [], 'top_hit_p_value': [], 'top_hit_shared_hashes': []}
     for filename, sample_matches in all_sample_matches:
-        species,  most_frequent_species_count, count, top_hit_distance, top_hit_p_value, top_hit_shared_hashes = get_most_frequent_species_match(sample_matches, refseq_species_info, args.distance_cutoff)
+        species, most_frequent_species_count, species_taxid, strain_taxid, count, top_hit_distance, top_hit_p_value, top_hit_shared_hashes = get_most_frequent_species_match(sample_matches, refseq_species_info, args.distance_cutoff)
         results['file'].append(filename)
         results['species'].append(species)
+        results['species_taxid'].append(species_taxid)
+        results['strain_taxid'].append(strain_taxid)
         if species == 'No significant matches':
             results['percentage'].append(np.NAN)
         else:
@@ -63,7 +65,7 @@ def run_check_species(args):
         results['top_hit_shared_hashes'].append(top_hit_shared_hashes)
     
     # convert to a dataframe and sort
-    results_df = pd.DataFrame(results, columns = ['file', 'species', 'percentage', 'top_hit_distance', 'top_hit_p_value', 'top_hit_shared_hashes']).sort_values('species', ascending=True)
+    results_df = pd.DataFrame(results, columns = ['file', 'species', 'species_taxid', 'strain_taxid', 'percentage', 'top_hit_distance', 'top_hit_p_value', 'top_hit_shared_hashes']).sort_values('species', ascending=True)
     results_df = results_df.rename(columns = {'percentage' : '%_of_{0}_best_matches=species'.format(args.num_best_matches) })
 
     refseq_species_metrics_df = create_refseq_species_metrics_df()

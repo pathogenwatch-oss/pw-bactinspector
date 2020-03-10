@@ -13,7 +13,7 @@ def run_mash_sketch(file, filetype, output_dir = None, mash_path = ''):
         sketch_file = os.path.join(output_dir, '{0}.msh'.format(get_base_name(file)))
     else:
         sketch_file = add_new_file_extension(file, 'msh')
-    
+
     if not os.path.exists(sketch_file) or os.path.getsize(sketch_file) == 0:
         sys.stderr.write('Sketching {0}\n'.format(get_base_name(file)))
         if filetype == 'fasta':
@@ -77,11 +77,20 @@ def get_most_frequent_species_match(matches, refseq_species_info, distance_cutof
         # get most frequent species and count
         most_frequent_species_name = best_match_species_df['curated_organism_name'].value_counts().index[0]
         most_frequent_species_count = best_match_species_df['curated_organism_name'].value_counts()[0]
+        most_frequent_species_taxid = best_match_species_df['species_taxid'].value_counts().index[0]
 
         # get top hit of the most frequent species as measured by distance
         top_hit = best_match_species_df.loc[best_match_species_df['curated_organism_name'] == most_frequent_species_name].sort_values('distance').iloc[0,:]
-        return (most_frequent_species_name,
+
+        closest_strain_id = top_hit.taxid
+
+        print(closest_strain_id)
+
+        return (
+            most_frequent_species_name,
             most_frequent_species_count,
+            most_frequent_species_taxid,
+            closest_strain_id,
             len(best_match_species_df),
             top_hit['distance'],
             top_hit['p-value'],
