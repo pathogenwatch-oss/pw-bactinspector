@@ -72,7 +72,7 @@ def get_most_frequent_species_match(matches, refseq_species_info, distance_cutof
     # filter for close matches
     best_match_species_df = best_match_species_df.loc[best_match_species_df['distance'] <= distance_cutoff]
     if len(best_match_species_df) == 0:
-        return 'No significant matches', None, None, None, None, None
+        return 'No significant matches', None, None, None, None, None, None, None, None
     else:
         # get most frequent species and count
         most_frequent_species_name = best_match_species_df['curated_organism_name'].value_counts().index[0]
@@ -82,15 +82,12 @@ def get_most_frequent_species_match(matches, refseq_species_info, distance_cutof
         # get top hit of the most frequent species as measured by distance
         top_hit = best_match_species_df.loc[best_match_species_df['curated_organism_name'] == most_frequent_species_name].sort_values('distance').iloc[0,:]
 
-        closest_strain_id = top_hit.taxid
-
-        print(closest_strain_id)
-
         return (
             most_frequent_species_name,
             most_frequent_species_count,
-            most_frequent_species_taxid,
-            closest_strain_id,
+            str(most_frequent_species_taxid),
+            str(top_hit.taxid),
+            top_hit.accession,
             len(best_match_species_df),
             top_hit['distance'],
             top_hit['p-value'],
