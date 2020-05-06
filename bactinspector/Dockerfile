@@ -1,6 +1,6 @@
 FROM python:3
 
-RUN pip3 install pandas
+RUN pip3 install pandas pyarrow profilehooks
 
 RUN curl -L https://github.com/marbl/Mash/releases/download/v2.2/mash-Linux64-v2.2.tar | tar xv \
     && mv mash-Linux64-v2.2/mash /usr/bin/ \

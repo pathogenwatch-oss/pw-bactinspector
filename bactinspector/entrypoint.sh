@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e -o pipefail
+
 export PYTHONPATH=/:/bactinspector/
 
 cat - > /tmp/input.fasta
