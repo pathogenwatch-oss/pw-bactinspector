@@ -8,7 +8,13 @@ RUN curl -L https://github.com/marbl/Mash/releases/download/v2.2/mash-Linux64-v2
 
 RUN mkdir -p /bactinspector
 
-COPY . /bactinspector/
+COPY data /bactinspector/data
+
+COPY libraries /bactinspector/libraries
+
+COPY *.py /bactinspector/
+
+COPY entrypoint.sh /bactinspector/
 
 RUN chmod +x /bactinspector/entrypoint.sh
 

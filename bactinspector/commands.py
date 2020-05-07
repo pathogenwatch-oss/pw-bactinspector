@@ -6,7 +6,6 @@ from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
-from profilehooks import timecall
 
 from bactinspector.dataframe_parsing_functions import create_refseq_species_metrics_df, \
     add_certainty_to_merged_results_df, create_refseq_species_info_df
@@ -14,7 +13,6 @@ from bactinspector.mash_functions import run_mash_sketch, get_best_mash_matches,
     get_species_match_details
 
 
-@timecall
 def sample_and_refseq_species_info(args, num_best_matches, mash_distance_cutoff):
     pool = Pool(processes=args.parallel_processes)
 
@@ -57,7 +55,6 @@ def sample_and_refseq_species_info(args, num_best_matches, mash_distance_cutoff)
     return sample_matches, refseq_species_info
 
 
-@timecall
 def run_check_species(args):
     # get sample matches and refseq_matches
     all_sample_matches, refseq_species_info = sample_and_refseq_species_info(args, args.num_best_matches, args.distance_cutoff)
@@ -98,12 +95,13 @@ def run_check_species(args):
                                                     allowed_variance_rarer_species=args.allowed_variance_rarer_species
                                                     )
 
-    now = datetime.datetime.now()
-    outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
-    results_df.to_csv(outfile, sep="\t", index=False)
     if args.stdout_summary:
         sys.stdout.write('{0}\n'.format(results_df.to_csv(header=False, sep="\t", index=False)))
-    sys.stderr.write("Results written to {0}\n".format(outfile))
+    else:
+        now = datetime.datetime.now()
+        outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
+        results_df.to_csv(outfile, sep="\t", index=False)
+        sys.stderr.write("Results written to {0}\n".format(outfile))
 
 
 def run_closest_match(args):

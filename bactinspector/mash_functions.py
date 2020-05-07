@@ -1,12 +1,9 @@
 import os
-import subprocess
 import sys
 import time
-from datetime import datetime
+from io import StringIO
 
 import pandas as pd
-from io import StringIO
-from profilehooks import timecall
 
 from bactinspector.utility_functions import add_new_file_extension, get_base_name, run_command
 
@@ -33,7 +30,6 @@ def run_mash_sketch(file, filetype, output_dir=None, mash_path=''):
     return sketch_file
 
 
-@timecall
 def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, output_dir=None, mash_path='',
                           number_of_best_matches=10, distance_threshold=0.5):
     """
@@ -54,9 +50,7 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, ou
     return get_base_name(sample_sketch), matches
 
 
-@timecall
 def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold):
-    print(f'Start {datetime.now()}')
     sys.stderr.write('Getting best match for {0}\n'.format(get_base_name(sample_sketch)))
     time1 = time.process_time()
     command_and_arguments = [os.path.join(mash_path, 'mash'), 'dist', '-d', str(distance_threshold), sample_sketch, ref_seq_sketch]
@@ -67,16 +61,13 @@ def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold
         print('Error whilst performing mash dist: {0}'.format(err))
         sys.exit(ret_code)
 
-    print(f'Middle {datetime.now()}')
     distances_fh = StringIO(out)
     mash_dists = pd.read_csv(distances_fh, sep="\t", names=['query', 'subject', 'distance', 'p-value', 'shared-hashes'])
-    print(f'Middle 2 {datetime.now()}')
     # if result.returncode != 0:
     #     print('Error whilst performing mash dist: {0}'.format(result.stderr))
     #     sys.exit(result.returncode)
     time2 = time.process_time()
     print(f'Mash time {time2 - time1}', file=sys.stderr)
-    print(f'End {datetime.now()}')
     return mash_dists
 
 

@@ -1,3 +1,8 @@
 .idea
 tests
 raw_data
+Dockerfile
+.dockerignore
+prepare_libraries.py
+build_notes.txt
+libraries/*.txt
