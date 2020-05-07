@@ -5,4 +5,4 @@ Dockerfile
 .dockerignore
 prepare_libraries.py
 build_notes.txt
-libraries/*.txt
+libraries_v1/*.txt

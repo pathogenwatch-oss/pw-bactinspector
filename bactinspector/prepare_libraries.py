@@ -1,4 +1,3 @@
-import itertools
 import subprocess
 import sys
 
@@ -33,6 +32,8 @@ def extract_mash_names(strain_table) -> set:
 data_dir = sys.argv[1]
 mash_dir = sys.argv[2]
 output_dir = sys.argv[3]
+max_sample_size = 5
+do_not_sample = {'NoGenus'}
 
 taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fillna('NoGenus')
 all_strains = pandas.read_parquet('data/all_complete_refseq.k21s1000.species.pqt').astype({'taxid': int}).set_index(
@@ -54,29 +55,30 @@ write_library('Eukaryota', fungi_strains, mash_dir, output_dir)
 
 # Get the bacteria genus codes
 genus_names = pandas.unique(bacteria['genus_name'])
-genus_reps = {genus_code: list() for genus_code in genus_names}
+genus_reps = dict()
+# genus_reps = {genus_code: list() for genus_code in genus_names}
 
 for genus_name in genus_names:
-    print(genus_name, file=sys.stderr)
+    # print(genus_name, file=sys.stderr)
     genus_strains = bacteria_strains[bacteria_strains['genus_name'] == genus_name]
-    # Write library for all members
+    if genus_strains.shape[0] == 0:
+        print(f'No reps for {genus_name}', file=sys.stderr)
+        continue
+        # Write library for all members
     write_library(genus_name, genus_strains, mash_dir, output_dir)
-
-    # Get a list of species and pick a representative from each one
     species_codes = pandas.unique(genus_strains['species_code'])
+    species_reps = list()
+    # Get a list of species and pick a representative from each one
     for species_code in species_codes:
         # print(species_code, file=sys.stderr)
-        genus_reps[genus_name].append(genus_strains[genus_strains['species_code'] == species_code].sample().iloc[0])
-
-# Convert the genus reps into a "strains" dataframe
-genus_reps_strains = pandas.DataFrame(list(itertools.chain.from_iterable(genus_reps.values())))
+        species_reps.append(genus_strains[genus_strains['species_code'] == species_code].sample(1))
+    species_selection = pandas.concat(species_reps)
+    if genus_name in do_not_sample:
+        genus_reps[genus_name] = species_selection
+    else:
+        sample_size = species_selection.shape[0] if species_selection.shape[0] <= max_sample_size else max_sample_size
+        genus_reps[genus_name] = species_selection.sample(sample_size)
 
 # Create the merged libraries
-merged_strains = genus_reps_strains.append(virus_strains).append(fungi_strains)
+merged_strains = pandas.concat(genus_reps.values()).append(virus_strains).append(fungi_strains)
 write_library('filter', merged_strains, mash_dir, output_dir)
-
-# Create a genus-specific library
-# strains = taxon_data[taxon_data['genus_code'] == genus_codes]
-# with open('genus_code.lst', 'r') as genus_fh:
-#     for strain_id in
-#         print(strain_id,file=genus_fh)
