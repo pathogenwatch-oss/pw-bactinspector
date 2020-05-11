@@ -9,4 +9,4 @@ csv_name = basename(original_csv).replace('.tsv', '')
 # df = pd.read_csv(original_csv, sep="\t")
 # .species.tsv should be read all as strings.
 df = pd.read_csv(original_csv, sep="\t", dtype=str)
-df.to_parquet(f"data/{csv_name}.pqt")
+df.to_parquet(f"{csv_name}.pqt")

@@ -1,5 +1,6 @@
 import json
 import sys
+
 import pandas
 
 # {
@@ -16,41 +17,44 @@ import pandas
 #     "matchingHashes": "398/400"
 # }
 
-species_info = pandas.read_parquet('data/taxon_info.pqt')
-for line in sys.stdin.readlines():
-    if line.startswith('file'):
-        continue
-    if line.rstrip() == '':
-        continue
-    data = line.rstrip().split('\t')
-    if data[1] == 'No significant matches':
-        record = {
-            'taxId': '',
-            'speciesId': '',
-            'speciesName': '',
-            'genusId': '',
-            "genusName": '',
-            "superkingdomId": '',
-            "superkingdomName": '',
-            "referenceId": '',
-            "mashDistance": 1.0,
-            "pValue": '',
-            "matchingHashes": '0/1000'
-        }
+
+def default_result() -> dict:
+    return {
+        'taxId': '',
+        'speciesId': '',
+        'speciesName': '',
+        'genusId': '',
+        "genusName": '',
+        "superkingdomId": '',
+        "superkingdomName": '',
+        "referenceId": '',
+        "mashDistance": 1.0,
+        "pValue": '',
+        "matchingHashes": '0/1000'
+    }
+
+
+def build_pw_result(result_df):
+    if result_df.shape[0] == 0:
+        return default_result()
+
+    result = result_df.iloc[0]
+    species_info = pandas.read_parquet('data/taxon_info.pqt')
+
+    if result['species'] == 'No significant matches':
+        return default_result()
     else:
-        species_md = species_info.loc[int(data[3])]
-        record = {
-            'taxId': data[3],
-            'speciesId': data[2],
+        species_md = species_info.loc[int(result['strain_taxid'])]
+        return {
+            'taxId': result['strain_taxid'],
+            'speciesId': result['species_taxid'],
             'speciesName': species_md['species_name'],
             'genusId': species_md['genus_code'],
             "genusName": species_md['genus_name'],
             "superkingdomId": species_md['superkingdom_code'],
             "superkingdomName": species_md['superkingdom_name'],
-            "referenceId": data[4],
-            "mashDistance": float(data[6]),
-            "pValue": float(data[7]),
-            "matchingHashes": data[8]
+            "referenceId": result['top_hit'],
+            "mashDistance": float(result['top_hit_distance']),
+            "pValue": float(result['top_hit_p_value']),
+            "matchingHashes": result['top_hit_shared_hashes']
         }
-    print(json.dumps(record), file=sys.stdout)
-    break

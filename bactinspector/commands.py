@@ -95,13 +95,14 @@ def run_check_species(args):
                                                     allowed_variance_rarer_species=args.allowed_variance_rarer_species
                                                     )
 
-    if args.stdout_summary:
-        sys.stdout.write('{0}\n'.format(results_df.to_csv(header=False, sep="\t", index=False)))
-    else:
-        now = datetime.datetime.now()
-        outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
-        results_df.to_csv(outfile, sep="\t", index=False)
-        sys.stderr.write("Results written to {0}\n".format(outfile))
+    # if args.stdout_summary:
+    #     sys.stdout.write('{0}\n'.format(results_df.to_csv(header=False, sep="\t", index=False)))
+    # else:
+    #     now = datetime.datetime.now()
+    #     outfile = os.path.join(args.output_dir, 'species_investigation_{0}.tsv'.format(now.strftime("%Y-%m-%d")))
+    #     results_df.to_csv(outfile, sep="\t", index=False)
+    #     sys.stderr.write("Results written to {0}\n".format(outfile))
+    return results_df
 
 
 def run_closest_match(args):
@@ -239,7 +240,7 @@ def run_info(search_term, data_source):
     if data_source == 'summary':
         info_df = create_refseq_species_metrics_df()
         search_field = 'species'
-    elif data_source == 'individual_records':
+    else:
         info_df = create_refseq_species_info_df(None)
         search_field = 'curated_organism_name'
 

@@ -21,7 +21,7 @@ def write_library(genus_name: str, strain_df, mash_files_path: str, output_path:
     library_filename = f'{output_path}/{name}'
     strain_names = extract_mash_names(strain_df)
     with open(list_filename, 'w') as list_fh:
-        list_fh.write('\n'.join([f'{mash_files_path}/{strainId}.msh' for strainId in strain_names]))
+        list_fh.write('\n'.join([f'{mash_files_path}/{strainId}.fna.gz.msh' for strainId in strain_names]))
     subprocess.run(['mash', 'paste', '-l', library_filename, list_filename], check=True)
 
 
@@ -32,7 +32,7 @@ def extract_mash_names(strain_table) -> set:
 data_dir = sys.argv[1]
 mash_dir = sys.argv[2]
 output_dir = sys.argv[3]
-max_sample_size = 5
+max_sample_size = 50
 do_not_sample = {'NoGenus'}
 
 taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fillna('NoGenus')
@@ -78,6 +78,9 @@ for genus_name in genus_names:
     else:
         sample_size = species_selection.shape[0] if species_selection.shape[0] <= max_sample_size else max_sample_size
         genus_reps[genus_name] = species_selection.sample(sample_size)
+
+# Exclude the NoGenus category from the filter library
+del genus_reps['NoGenus']
 
 # Create the merged libraries
 merged_strains = pandas.concat(genus_reps.values()).append(virus_strains).append(fungi_strains)

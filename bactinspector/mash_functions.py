@@ -52,7 +52,7 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, ou
 
 def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold):
     sys.stderr.write('Getting best match for {0}\n'.format(get_base_name(sample_sketch)))
-    time1 = time.process_time()
+    # time1 = time.process_time()
     command_and_arguments = [os.path.join(mash_path, 'mash'), 'dist', '-d', str(distance_threshold), sample_sketch, ref_seq_sketch]
 
     # result = subprocess.run(command_and_arguments, stdout=subprocess.PIPE, stderr=True, text=True)
@@ -66,8 +66,8 @@ def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold
     # if result.returncode != 0:
     #     print('Error whilst performing mash dist: {0}'.format(result.stderr))
     #     sys.exit(result.returncode)
-    time2 = time.process_time()
-    print(f'Mash time {time2 - time1}', file=sys.stderr)
+    # time2 = time.process_time()
+    # print(f'Mash time {time2 - time1}', file=sys.stderr)
     return mash_dists
 
 
