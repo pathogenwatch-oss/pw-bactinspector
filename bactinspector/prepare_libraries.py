@@ -32,8 +32,9 @@ def extract_mash_names(strain_table) -> set:
 data_dir = sys.argv[1]
 mash_dir = sys.argv[2]
 output_dir = sys.argv[3]
-max_sample_size = 50
+max_sample_size = 1000
 do_not_sample = {'NoGenus'}
+merge_set1 = {'Salmonella', 'Shigella'}
 
 taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fillna('NoGenus')
 all_strains = pandas.read_parquet('data/all_complete_refseq.k21s1000.species.pqt').astype({'taxid': int}).set_index(
@@ -59,8 +60,13 @@ genus_reps = dict()
 # genus_reps = {genus_code: list() for genus_code in genus_names}
 
 for genus_name in genus_names:
+    if genus_name == 'Salmonella':
+        continue
     # print(genus_name, file=sys.stderr)
     genus_strains = bacteria_strains[bacteria_strains['genus_name'] == genus_name]
+    if genus_name == 'Escherichia':
+        genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Salmonella']).append(
+            bacteria_strains[bacteria_strains['genus_name'] == 'Shigella'])
     if genus_strains.shape[0] == 0:
         print(f'No reps for {genus_name}', file=sys.stderr)
         continue

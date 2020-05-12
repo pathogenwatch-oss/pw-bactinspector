@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 from io import StringIO
 
 import pandas as pd
@@ -51,9 +50,10 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, ou
 
 
 def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold):
-    sys.stderr.write('Getting best match for {0}\n'.format(get_base_name(sample_sketch)))
+    sys.stderr.write(f'Getting best match for {get_base_name(sample_sketch)}\n')
     # time1 = time.process_time()
-    command_and_arguments = [os.path.join(mash_path, 'mash'), 'dist', '-d', str(distance_threshold), sample_sketch, ref_seq_sketch]
+    command_and_arguments = [os.path.join(mash_path, 'mash'), 'dist', '-d', str(distance_threshold), sample_sketch,
+                             ref_seq_sketch]
 
     # result = subprocess.run(command_and_arguments, stdout=subprocess.PIPE, stderr=True, text=True)
     ret_code, out, err = run_command(command_and_arguments, text=True)
@@ -90,24 +90,40 @@ def get_most_frequent_species_match(matches, refseq_species_info, distance_cutof
     """
     best_match_species_df = get_species_match_details(matches, refseq_species_info)
     # filter for close matches
-    best_match_species_df = best_match_species_df.loc[best_match_species_df['distance'] <= distance_cutoff]
+    # best_match_species_df = best_match_species_df.loc[best_match_species_df['distance'] <= distance_cutoff]
     if len(best_match_species_df) == 0:
         return 'No significant matches', None, None, None, None, None, None, None, None
     else:
         # get most frequent species and count
-        most_frequent_species_name = best_match_species_df['curated_organism_name'].value_counts().index[0]
-        most_frequent_species_count = best_match_species_df['curated_organism_name'].value_counts()[0]
-        most_frequent_species_taxid = best_match_species_df['species_taxid'].value_counts().index[0]
+        species_name_counts = best_match_species_df['curated_organism_name'].value_counts()
+        if 1 == species_name_counts.size or species_name_counts[0] != species_name_counts[1]:
+            most_frequent_species_name = species_name_counts.index[0]
+            most_frequent_species_count = species_name_counts[0]
+        else:
+            equal_often_names = species_name_counts[species_name_counts == species_name_counts[0]].index.tolist()
+            best_match = pd.concat(
+                [best_match_species_df.loc[best_match_species_df['curated_organism_name'] == test_name].sort_values(
+                    'distance').head(1) for test_name in equal_often_names]).sort_values('distance').iloc[0, :]
+            most_frequent_species_name = best_match['curated_organism_name']
+            most_frequent_species_count = species_name_counts[0]
 
         # get top hit of the most frequent species as measured by distance
-        top_hit = best_match_species_df.loc[
-                      best_match_species_df['curated_organism_name'] == most_frequent_species_name].sort_values(
-            'distance').iloc[0, :]
+        taxid_counts = best_match_species_df['species_taxid'].value_counts()
+        if 1 == taxid_counts.size or taxid_counts[0] != taxid_counts[1]:
+            most_frequent_species_taxid = taxid_counts.index[0]
+            top_hit = best_match_species_df.loc[
+                          best_match_species_df['species_taxid'] == most_frequent_species_taxid].sort_values(
+                'distance').iloc[0, :]
+        else:
+            equal_often_taxids = taxid_counts[taxid_counts == taxid_counts[0]].index.tolist()
+            top_hit = pd.concat(
+                [best_match_species_df.loc[best_match_species_df['species_taxid'] == test_taxid].sort_values(
+                    'distance').head(1) for test_taxid in equal_often_taxids]).sort_values('distance').iloc[0, :]
 
         return (
             most_frequent_species_name,
             most_frequent_species_count,
-            str(most_frequent_species_taxid),
+            str(top_hit['species_taxid']),
             str(top_hit.taxid),
             top_hit.accession,
             len(best_match_species_df),
