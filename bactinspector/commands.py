@@ -57,7 +57,8 @@ def sample_and_refseq_species_info(args, num_best_matches, mash_distance_cutoff)
 
 def run_check_species(args):
     # get sample matches and refseq_matches
-    all_sample_matches, refseq_species_info = sample_and_refseq_species_info(args, args.num_best_matches, args.distance_cutoff)
+    all_sample_matches, refseq_species_info = sample_and_refseq_species_info(args, args.num_best_matches,
+                                                                             args.distance_cutoff)
 
     results = {'file': [], 'species': [], 'species_taxid': [], 'strain_taxid': [], 'top_hit': [], 'percentage': [],
                'top_hit_distance': [], 'top_hit_p_value': [], 'top_hit_shared_hashes': []}
@@ -132,7 +133,8 @@ def run_closest_match(args):
 
 
 def run_create_species_info(args):
-    info_df = pd.read_parquet(args.mash_info_file)
+    # info_df = pd.read_parquet(args.mash_info_file)
+    info_df = pd.read_csv(args.mash_info_file, sep='\t')
     # extract num of contigs
     info_df['num_contigs'] = info_df['Comment'].str.extract(r'\[(\d+) seqs\]')
     # Those rows without [N seqs] have 1 contig
@@ -145,7 +147,7 @@ def run_create_species_info(args):
     info_df['GCF_accession_without_version'] = info_df['GCF_accession'].str.replace(r'\.\d+$', '')
     info_df['Comment'] = info_df["Comment"].str.replace('^\w{2}_[\w\.]+', '').str.replace('\[\.\.\.\]$', '')
 
-    # rename and reorder columns 
+    # rename and reorder columns
     info_df = info_df.rename(columns={'Length': 'length', 'ID': 'filename', 'Comment': 'info'})
     info_df = info_df[
         ['accession', 'GCF_accession', 'GCF_accession_without_version', 'filename', 'length', 'num_contigs', 'info']]
@@ -157,6 +159,9 @@ def run_create_species_info(args):
         r'\.\d+$',
         ''
     )
+
+    # Read the NCBI data
+    taxonomy_df = pd.read_parquet('data/taxon_info.pqt')
 
     # read in bacsort species
     bacsort_species = pd.read_csv(args.bacsort_species_file, sep='\t', comment='#',
@@ -179,7 +184,13 @@ def run_create_species_info(args):
     merged.loc[merged['organism_name'].isnull(), 'organism_name'] = 'excluded'
     # rename organism_name to full_organism_name
     merged = merged.rename(columns={'organism_name': 'full_organism_name'})
-    merged['organism_name'] = merged['full_organism_name'].str.split(' ').str[0:2].str.join(' ')
+    # names_dict = taxonomy_df.drop(
+    #     columns=['species_code', 'genus_name', 'genus_code', 'superkingdom_code', 'superkingdom_name']).to_dict()
+    merged = merged.astype({'taxid': int}).merge(taxonomy_df, left_on='taxid', right_index=True, how='left')
+    merged = merged.drop(
+        columns=['species_code', 'genus_name', 'genus_code', 'superkingdom_code', 'superkingdom_name']).rename(
+        columns={'species_name': 'organism_name'})
+    # merged['organism_name'] = merged['taxid'].apply(lambda x: names_dict[x])
 
     # reorder columns
     merged = merged[[
@@ -211,15 +222,15 @@ def run_create_species_info(args):
     )
 
     # convert Salmonella species to serovars
-    merged_with_bacsort['salmonella_serovars'] = merged_with_bacsort['full_organism_name'].str.extract(
-        r'(Salmonella enterica subsp. enterica serovar\s\w+)')
-    merged_with_bacsort['curated_organism_name'] = np.where(
-        (merged_with_bacsort['full_organism_name'].str.contains('Salmonella enterica subsp. enterica serovar')) &
-        (merged_with_bacsort['curated_organism_name'] == 'Salmonella enterica'),
-        merged_with_bacsort['salmonella_serovars'],
-        merged_with_bacsort['curated_organism_name']
-    )
-    merged_with_bacsort = merged_with_bacsort.drop(columns=['salmonella_serovars'])
+    # merged_with_bacsort['salmonella_serovars'] = merged_with_bacsort['full_organism_name'].str.extract(
+    #     r'(Salmonella enterica subsp. enterica serovar\s\w+)')
+    # merged_with_bacsort['curated_organism_name'] = np.where(
+    #     (merged_with_bacsort['full_organism_name'].str.contains('Salmonella enterica subsp. enterica serovar')) &
+    #     (merged_with_bacsort['curated_organism_name'] == 'Salmonella enterica'),
+    #     merged_with_bacsort['salmonella_serovars'],
+    #     merged_with_bacsort['curated_organism_name']
+    # )
+    # merged_with_bacsort = merged_with_bacsort.drop(columns=['salmonella_serovars'])
 
     # rename and change order of columns
     merged_with_bacsort = merged_with_bacsort.rename(
@@ -231,9 +242,8 @@ def run_create_species_info(args):
          'asm_name', 'submitter', 'ftp_path']]
 
     # write out file
-    merged_with_bacsort.to_csv(
-        os.path.join(os.path.dirname(args.mash_info_file), 'all_complete_bacteria_refseq.k21s1000.species.tsv'),
-        sep="\t", index=False)
+    merged_with_bacsort.astype({'num_contigs': int}).to_parquet(
+        os.path.join(os.path.dirname(args.mash_info_file), 'all_complete_bacteria_refseq.k21s1000.species.pqt'))
 
 
 def run_info(search_term, data_source):
