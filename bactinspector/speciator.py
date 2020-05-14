@@ -14,17 +14,18 @@ class AttributeDict(dict):
 
 def default_result() -> dict:
     return {
-        'taxId': '',
-        'speciesId': '',
-        'speciesName': '',
-        'genusId': '',
-        "genusName": '',
-        "superkingdomId": '',
-        "superkingdomName": '',
-        "referenceId": '',
+        'taxId': '32644',
+        'speciesId': '32644',
+        'speciesName': 'Unidentified',
+        'genusId': '9999999',
+        "genusName": 'Unclassified',
+        "superkingdomId": '12908',
+        "superkingdomName": 'Unclassified Sequences',
+        "referenceId": 'None found',
         "mashDistance": 1.0,
-        "pValue": '',
-        "matchingHashes": '0/1000'
+        "pValue": 0,
+        "matchingHashes": '0/1000',
+        "confidence": 'None'
     }
 
 
@@ -48,14 +49,15 @@ def build_pw_result(result_df, species_datafile):
             'taxId': strain_id,
             'speciesId': species_md['species_code'],
             'speciesName': species_md['species_name'],
-            'genusId': species_md['genus_code'],
-            "genusName": species_md['genus_name'],
+            'genusId': species_md['genus_code'] if species_md['genus_code'] != '' else '9999999',
+            "genusName": species_md['genus_name'] if species_md['genus_name'] != '' else 'Unclassified',
             "superkingdomId": species_md['superkingdom_code'],
             "superkingdomName": species_md['superkingdom_name'],
             "referenceId": result['top_hit'],
             "mashDistance": float(result['top_hit_distance']),
             "pValue": float(result['top_hit_p_value']),
-            "matchingHashes": result['top_hit_shared_hashes']
+            "matchingHashes": result['top_hit_shared_hashes'],
+            "confidence": result['result']
         }
 
 
@@ -81,13 +83,14 @@ filter_result = build_pw_result(commands.run_check_species(
                    'allowed_variance_rarer_species': 0.5
                    })), 'data/taxon_info.pqt')
 
-genus = filter_result['genusName'].replace(' ', '_') if filter_result['genusName'] != '' else 'NoGenus'
+genus = filter_result['genusName'].replace(' ', '_') if filter_result[
+                                                            'genusName'] != 'Unclassified' else 'NoGenus'
 
 print(f"Genus: {genus}", file=sys.stderr)
 
 escherichia_genus = {'Salmonella', 'Shigella', 'Escherichia'}
 
-if filter_result['superkingdomName'] != 'Bacteria' and filter_result['superkingdomName'] != '':
+if filter_result['superkingdomName'] != 'Bacteria' and filter_result['superkingdomName'] != 'Unclassified Sequences':
     library, threshold = filter_result['superkingdomName'], 0.075
 elif genus == 'NoGenus':
     library, threshold = genus, 0.075
@@ -113,6 +116,23 @@ results_df = commands.run_check_species(
                    'allowed_variance': 0.1,
                    'allowed_variance_rarer_species': 0.5
                    }))
+
+# Check if we need to try the hit n hope.
+if results_df.iloc[0]['species'] == 'No significant matches':
+    results_df = commands.run_check_species(
+        AttributeDict({'distance_cutoff': threshold,
+                       'fasta_file_pattern': fasta_file,
+                       'input_dir': input_dir,
+                       'output_dir': '/tmp/',
+                       'local_mash_and_info_file_prefix': f'{libraries_path}/NoGenus.k21s1000',
+                       'stdout_summary': True,
+                       'num_best_matches': 10,
+                       'parallel_processes': 1,
+                       'mash_path': '',
+                       'allowed_variance': 0.1,
+                       'allowed_variance_rarer_species': 0.5
+                       })
+    )
 
 json_result = build_pw_result(results_df, 'data/taxon_info.pqt')
 print(json.dumps(json_result), file=sys.stdout)

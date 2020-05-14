@@ -22,7 +22,9 @@ def write_library(genus_name: str, strain_df, mash_files_path: str, output_path:
     strain_names = extract_mash_names(strain_df)
     with open(list_filename, 'w') as list_fh:
         list_fh.write('\n'.join([f'{mash_files_path}/{strainId}.fna.gz.msh' for strainId in strain_names]))
-    subprocess.run(['mash', 'paste', '-l', library_filename, list_filename], check=True)
+    result = subprocess.run(['mash', 'paste', '-l', library_filename, list_filename], check=True, capture_output=True)
+    if result.returncode != 0:
+        exit(result.stderr)
 
 
 def extract_mash_names(strain_table) -> set:
@@ -34,7 +36,10 @@ mash_dir = sys.argv[2]
 output_dir = sys.argv[3]
 max_sample_size = 1000
 do_not_sample = {'NoGenus'}
-merge_set1 = {'Salmonella', 'Shigella'}
+merge_sets = {"Escherichia": {'Salmonella', 'Shigella', 'Citrobacter'},
+              'Macrococcus': {'Micrococcus'},
+              'Bacteroides': {'Parabacteroides'}}
+skip_genus = set().union(*merge_sets.values())
 
 taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fillna('NoGenus')
 all_strains = pandas.read_parquet('data/all_complete_refseq.k21s1000.species.pqt').astype({'taxid': int}).set_index(
@@ -60,13 +65,22 @@ genus_reps = dict()
 # genus_reps = {genus_code: list() for genus_code in genus_names}
 
 for genus_name in genus_names:
-    if genus_name == 'Salmonella':
+    if genus_name in skip_genus:
         continue
     # print(genus_name, file=sys.stderr)
     genus_strains = bacteria_strains[bacteria_strains['genus_name'] == genus_name]
-    if genus_name == 'Escherichia':
-        genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Salmonella']).append(
-            bacteria_strains[bacteria_strains['genus_name'] == 'Shigella'])
+    if genus_name in merge_sets.keys():
+        for merge_genus in merge_sets[genus_name]:
+            print(f"Merging {merge_genus} into {genus_name}")
+            genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == merge_genus])
+    # if genus_name == 'Escherichia':
+    #     genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Salmonella']).append(
+    #         bacteria_strains[bacteria_strains['genus_name'] == 'Shigella']).append(
+    #         bacteria_strains[bacteria_strains['genus_name'] == 'Citrobacter'])
+    # elif genus_name == 'Macrococcus':
+    #     genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Micrococcus'])
+    # elif genus_name == 'Bacteroides':
+    #     genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Parabacteroides'])
     if genus_strains.shape[0] == 0:
         print(f'No reps for {genus_name}', file=sys.stderr)
         continue

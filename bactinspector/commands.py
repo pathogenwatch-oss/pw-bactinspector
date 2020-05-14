@@ -133,7 +133,7 @@ def run_closest_match(args):
 
 
 def run_create_species_info(args):
-    # info_df = pd.read_parquet(args.mash_info_file)
+
     info_df = pd.read_csv(args.mash_info_file, sep='\t')
     # extract num of contigs
     info_df['num_contigs'] = info_df['Comment'].str.extract(r'\[(\d+) seqs\]')
@@ -220,17 +220,6 @@ def run_create_species_info(args):
         merged_with_bacsort['organism_name'],
         merged_with_bacsort['curated_organism_name']
     )
-
-    # convert Salmonella species to serovars
-    # merged_with_bacsort['salmonella_serovars'] = merged_with_bacsort['full_organism_name'].str.extract(
-    #     r'(Salmonella enterica subsp. enterica serovar\s\w+)')
-    # merged_with_bacsort['curated_organism_name'] = np.where(
-    #     (merged_with_bacsort['full_organism_name'].str.contains('Salmonella enterica subsp. enterica serovar')) &
-    #     (merged_with_bacsort['curated_organism_name'] == 'Salmonella enterica'),
-    #     merged_with_bacsort['salmonella_serovars'],
-    #     merged_with_bacsort['curated_organism_name']
-    # )
-    # merged_with_bacsort = merged_with_bacsort.drop(columns=['salmonella_serovars'])
 
     # rename and change order of columns
     merged_with_bacsort = merged_with_bacsort.rename(
