@@ -5,4 +5,5 @@ Dockerfile
 .dockerignore
 prepare_libraries.py
 build_notes.txt
-libraries_v1/*.txt
+convert_csv_to_parquet.py
+libraries/*.txt

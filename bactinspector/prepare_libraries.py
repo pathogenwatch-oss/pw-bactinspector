@@ -45,6 +45,8 @@ taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fil
 all_strains = pandas.read_parquet('data/all_complete_refseq.k21s1000.species.pqt').astype({'taxid': int}).set_index(
     'taxid')
 
+all_strains = all_strains[all_strains['curated_organism_name'] != 'Excluded']
+
 # Split by species
 viruses = taxon_data[taxon_data['superkingdom_name'] == 'Viruses']
 fungi = taxon_data[taxon_data['superkingdom_name'] == 'Eukaryota']
