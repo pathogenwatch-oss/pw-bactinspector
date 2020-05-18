@@ -39,12 +39,17 @@ def build_pw_result(result_df, species_datafile):
     if result['species'] == 'No significant matches':
         return default_result()
     else:
-        species_md = species_info[species_info['species_name'] == result['species']].iloc[0]
+        if species_info[species_info['species_name'] == result['species']].shape[0] > 0:
+            species_md = species_info[species_info['species_name'] == result['species']].iloc[0]
+        else:
+            species_md = species_info[species_info['species_code'] == result['species_taxid']].iloc[0]
         if species_md['species_code'] != result['species_taxid']:
             # This is a re-written reference
             strain_id = species_md['species_code']
         else:
             strain_id = result['strain_taxid']
+        species_md.fillna(value='', inplace=True)
+        print(f"Strain ID: {strain_id}; superkingdom_code: {species_md['superkingdom_code']}", file=sys.stderr)
         return {
             'taxId': strain_id,
             'speciesId': species_md['species_code'],
@@ -69,6 +74,7 @@ input_dir = os.path.dirname(fasta_path)
 fasta_file = os.path.basename(fasta_path)
 
 # Initial filter
+print(f'Running filter search', file=sys.stderr)
 filter_result = build_pw_result(commands.run_check_species(
     AttributeDict({'distance_cutoff': 0.15,
                    'fasta_file_pattern': fasta_file,
@@ -86,16 +92,21 @@ filter_result = build_pw_result(commands.run_check_species(
 genus = filter_result['genusName'].replace(' ', '_') if filter_result[
                                                             'genusName'] != 'Unclassified' else 'NoGenus'
 
-print(f"Genus: {genus}", file=sys.stderr)
-
-escherichia_genus = {'Salmonella', 'Shigella', 'Escherichia'}
+# print(f"Genus: {genus}", file=sys.stderr)
+collected_groups = {"Escherichia": {'Salmonella', 'Shigella', 'Citrobacter'},
+                    'Macrococcus': {'Micrococcus'},
+                    'Bacteroides': {'Parabacteroides'}}
 
 if filter_result['superkingdomName'] != 'Bacteria' and filter_result['superkingdomName'] != 'Unclassified Sequences':
     library, threshold = filter_result['superkingdomName'], 0.075
 elif genus == 'NoGenus':
     library, threshold = genus, 0.075
-elif genus in escherichia_genus:
+elif genus in collected_groups['Escherichia']:
     library, threshold = 'Escherichia', 0.05
+elif genus in collected_groups['Macrococcus']:
+    library, threshold = 'Macrococcus', 0.05
+elif genus in collected_groups['Bacteroides']:
+    library, threshold = 'Bacteroides', 0.05
 else:
     library, threshold = genus, 0.05
 

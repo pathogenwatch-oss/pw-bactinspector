@@ -39,3 +39,22 @@ rsync -av --no-relative --files-from=all_paths.txt rsync://ftp.ncbi.nlm.nih.gov/
 #rsync -av --no-relative --files-from=bacteria_paths.txt rsync://ftp.ncbi.nlm.nih.gov/genomes assemblies/
 
 find . -maxdepth 1 -name "*.gz" | xargs -I xxx basename xxx | xargs -P 4 -I xxx mash sketch xxx
+
+grep "^[^#;]" assembly_summary.txt | awk -F '\t' '{print $6}' | sort -u > organism_taxids.lst
+
+taxonkit lineage organism_taxids.lst | awk '$2!=""' > organism_lineages.txt
+cat organism_lineages.txt \
+  | taxonkit reformat \
+  | csvtk -H cut -f 1,3 -t \
+  | csvtk -H sep -f 2 -s ';' -R -t \
+  | csvtk add-header -t -n taxonId,superkingdom,phylum,class,order,family,genus,species \
+  | csvtk tab2csv \
+  | csvtk cut -f 1,2,7,8 > taxon_names.csv
+
+cat organism_lineages.txt \
+  | taxonkit reformat -t \
+  | csvtk -H cut -f 1,4 -t \
+  | csvtk -H sep -f 2 -s ';' -R -t \
+  | csvtk add-header -t -n taxonId,superkingdom,phylum,class,order,family,genus,species \
+  | csvtk tab2csv \
+  | csvtk cut -f 1,2,7,8 > taxon_codes.csv
