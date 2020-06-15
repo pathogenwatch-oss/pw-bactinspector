@@ -1,10 +1,10 @@
 #!/bin/bash
 
-set -e -o pipefail
+set -eo pipefail
 
 export PYTHONPATH=/:/bactinspector/
 
-echoerr() { printf "%s\n" "$*" >&2; }
+#echoerr() { printf "%s\n" "$*" >&2; }
 
 cat - > /tmp/input.fasta
 

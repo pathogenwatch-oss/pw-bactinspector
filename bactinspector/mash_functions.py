@@ -39,7 +39,7 @@ def get_best_mash_matches(sample_sketch, ref_seq_sketch, refseq_species_info, ou
     if not os.path.exists(match_file) or os.path.getsize(match_file) == 0:
         mash_dists = execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold)
         # merge with refseq matches for potential filtering
-        mash_dists = mash_dists.merge(refseq_species_info, left_on='subject', right_on='filename', how='right')
+        # mash_dists = mash_dists.merge(refseq_species_info, left_on='subject', right_on='filename', how='right')
         mash_dists = mash_dists.filter(['query', 'subject', 'distance', 'p-value', 'shared-hashes'])
         # sort by distance and output the subjects (match in refseq) 
         matches = mash_dists.sort_values('distance', ascending=True).head(number_of_best_matches)
@@ -55,6 +55,7 @@ def execute_mashing(mash_path, ref_seq_sketch, sample_sketch, distance_threshold
     command_and_arguments = [os.path.join(mash_path, 'mash'), 'dist', '-d', str(distance_threshold), sample_sketch,
                              ref_seq_sketch]
 
+    print(command_and_arguments, file=sys.stderr)
     # result = subprocess.run(command_and_arguments, stdout=subprocess.PIPE, stderr=True, text=True)
     ret_code, out, err = run_command(command_and_arguments, text=True)
     if ret_code != 0:

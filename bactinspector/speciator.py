@@ -68,6 +68,7 @@ def build_pw_result(result_df, species_datafile):
 
 fasta_path = sys.argv[1]
 libraries_path = sys.argv[2]
+num_best_matches = 20
 
 # print(f'Running {fasta_path} against {libraries_path}\n', file=sys.stderr)
 input_dir = os.path.dirname(fasta_path)
@@ -82,7 +83,7 @@ filter_result = build_pw_result(commands.run_check_species(
                    'output_dir': '/tmp/',
                    'local_mash_and_info_file_prefix': f'{libraries_path}/filter.k21s1000',
                    'stdout_summary': True,
-                   'num_best_matches': 10,
+                   'num_best_matches': num_best_matches,
                    'parallel_processes': 1,
                    'mash_path': '',
                    'allowed_variance': 0.1,
@@ -93,24 +94,27 @@ genus = filter_result['genusName'].replace(' ', '_') if filter_result[
                                                             'genusName'] != 'Unclassified' else 'NoGenus'
 
 # print(f"Genus: {genus}", file=sys.stderr)
-collected_groups = {"Escherichia": {'Salmonella', 'Shigella', 'Citrobacter'},
-                    'Macrococcus': {'Micrococcus'},
-                    'Bacteroides': {'Parabacteroides'}}
+collected_groups = {"Escherichia": {'Escherichia', 'Salmonella', 'Shigella', 'Citrobacter'},
+                    'Macrococcus': {'Macrococcus', 'Micrococcus'},
+                    'Bacteroides': {'Bacteroides', 'Parabacteroides'},
+                    'Klebsiella': {'Klebsiella', 'Raoultella'}}
 
 if filter_result['superkingdomName'] != 'Bacteria' and filter_result['superkingdomName'] != 'Unclassified Sequences':
     library, threshold = filter_result['superkingdomName'], 0.075
-elif genus == 'NoGenus':
-    library, threshold = genus, 0.075
 elif genus in collected_groups['Escherichia']:
     library, threshold = 'Escherichia', 0.05
+elif genus in collected_groups['Klebsiella']:
+    library, threshold, num_best_matches = 'Klebsiella', 0.05, 1
 elif genus in collected_groups['Macrococcus']:
     library, threshold = 'Macrococcus', 0.05
 elif genus in collected_groups['Bacteroides']:
     library, threshold = 'Bacteroides', 0.05
+elif genus == 'NoGenus':
+    library, threshold, num_best_matches = genus, 0.075, 20
 else:
-    library, threshold = genus, 0.05
+    library, threshold, num_best_matches = genus, 0.05, 20
 
-print(f'Library={library}, threshold={threshold}', file=sys.stderr)
+print(f'Library={library}, threshold={threshold}, num_best_matches={num_best_matches}', file=sys.stderr)
 
 library_file = f'{libraries_path}/{library}.k21s1000'
 
@@ -121,7 +125,7 @@ results_df = commands.run_check_species(
                    'output_dir': '/tmp/',
                    'local_mash_and_info_file_prefix': library_file,
                    'stdout_summary': True,
-                   'num_best_matches': 10,
+                   'num_best_matches': num_best_matches,
                    'parallel_processes': 1,
                    'mash_path': '',
                    'allowed_variance': 0.1,
@@ -137,7 +141,7 @@ if results_df.iloc[0]['species'] == 'No significant matches':
                        'output_dir': '/tmp/',
                        'local_mash_and_info_file_prefix': f'{libraries_path}/NoGenus.k21s1000',
                        'stdout_summary': True,
-                       'num_best_matches': 10,
+                       'num_best_matches': num_best_matches,
                        'parallel_processes': 1,
                        'mash_path': '',
                        'allowed_variance': 0.1,

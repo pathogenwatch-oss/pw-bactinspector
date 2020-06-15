@@ -2,7 +2,6 @@ import datetime
 import glob
 import os
 import sys
-from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
@@ -14,30 +13,29 @@ from bactinspector.mash_functions import run_mash_sketch, get_best_mash_matches,
 
 
 def sample_and_refseq_species_info(args, num_best_matches, mash_distance_cutoff):
-    pool = Pool(processes=args.parallel_processes)
+    # pool = Pool(processes=args.parallel_processes)
 
     if args.mash_path:
         mash_path = args.mash_path
     else:
         mash_path = ''
 
-    if args.fasta_file_pattern:
-        # run sketches in parallel
-        fasta_files = glob.glob(os.path.join(args.input_dir, args.fasta_file_pattern))
-        if len(fasta_files) == 0:
-            sys.exit('No files match the pattern {0} in {1}'.format(args.fasta_file_pattern, args.input_dir))
-        sketch_files = pool.starmap(run_mash_sketch,
-                                    [(fasta_file, 'fasta', args.output_dir, mash_path) for fasta_file in fasta_files])
-    elif args.fastq_file_pattern:
-        fastq_files = glob.glob(os.path.join(args.input_dir, args.fastq_file_pattern))
-        if len(fastq_files) == 0:
-            sys.exit('No files match the pattern {0} in {1}'.format(args.fastq_file_pattern, args.input_dir))
-        sketch_files = pool.starmap(run_mash_sketch,
-                                    [(fastq_file, 'fastq', args.output_dir, mash_path) for fastq_file in fastq_files])
-    elif args.mash_sketch_file_pattern:
-        sketch_files = glob.glob(os.path.join(args.input_dir, args.mash_sketch_file_pattern))
-        if len(sketch_files) == 0:
-            sys.exit('No files match the pattern {0} in {1}'.format(args.mash_sketch_file_pattern, args.input_dir))
+    # if args.fasta_file_pattern:
+    # run sketches in parallel
+    fasta_files = glob.glob(os.path.join(args.input_dir, args.fasta_file_pattern))
+    if len(fasta_files) == 0:
+        sys.exit('No files match the pattern {0} in {1}'.format(args.fasta_file_pattern, args.input_dir))
+    sketch_files = [run_mash_sketch(fasta_file, 'fasta', args.output_dir, mash_path) for fasta_file in fasta_files]
+    # elif args.fastq_file_pattern:
+    #     fastq_files = glob.glob(os.path.join(args.input_dir, args.fastq_file_pattern))
+    #     if len(fastq_files) == 0:
+    #         sys.exit('No files match the pattern {0} in {1}'.format(args.fastq_file_pattern, args.input_dir))
+    #     sketch_files = pool.starmap(run_mash_sketch,
+    #                                 [(fastq_file, 'fastq', args.output_dir, mash_path) for fastq_file in fastq_files])
+    # elif args.mash_sketch_file_pattern:
+    #     sketch_files = glob.glob(os.path.join(args.input_dir, args.mash_sketch_file_pattern))
+    #     if len(sketch_files) == 0:
+    #         sys.exit('No files match the pattern {0} in {1}'.format(args.mash_sketch_file_pattern, args.input_dir))
 
     refseq_species_info = create_refseq_species_info_df(args.local_mash_and_info_file_prefix,
                                                         'ref_and_rep_only' in args and args.ref_and_rep_only)
@@ -48,10 +46,10 @@ def sample_and_refseq_species_info(args, num_best_matches, mash_distance_cutoff)
     else:
         all_bacterial_refseq_sketches = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data',
                                                      'all_complete_bacteria_refseq.k21s1000.msh')
-    sample_matches = pool.starmap(get_best_mash_matches, [(sample_sketch, all_bacterial_refseq_sketches,
-                                                           refseq_species_info, args.output_dir, mash_path,
-                                                           num_best_matches, mash_distance_cutoff) for sample_sketch in
-                                                          sketch_files])
+    sample_matches = [get_best_mash_matches(sample_sketch, all_bacterial_refseq_sketches,
+                                            refseq_species_info, args.output_dir, mash_path,
+                                            num_best_matches, mash_distance_cutoff) for sample_sketch in
+                      sketch_files]
     return sample_matches, refseq_species_info
 
 
@@ -133,7 +131,6 @@ def run_closest_match(args):
 
 
 def run_create_species_info(args):
-
     info_df = pd.read_csv(args.mash_info_file, sep='\t')
     # extract num of contigs
     info_df['num_contigs'] = info_df['Comment'].str.extract(r'\[(\d+) seqs\]')
@@ -199,7 +196,7 @@ def run_create_species_info(args):
         'infraspecific_name', 'assembly_level', 'asm_name', 'submitter', 'ftp_path'
     ]]
 
-    # incorporate bacsort 
+    # incorporate bacsort
     merged_with_bacsort = merged.merge(bacsort_species, on=['GCF_accession_without_version'], how='left')
     merged_with_bacsort = merged_with_bacsort.merge(bacsort_excluded, left_on=['GCF_accession_without_version'],
                                                     right_on=['excluded_GCF_accession'], how='left')
@@ -218,6 +215,12 @@ def run_create_species_info(args):
     merged_with_bacsort['curated_organism_name'] = np.where(
         merged_with_bacsort['curated_organism_name'].isna(),
         merged_with_bacsort['organism_name'],
+        merged_with_bacsort['curated_organism_name']
+    )
+
+    merged_with_bacsort['curated_organism_name'] = np.where(
+        merged_with_bacsort['curated_organism_name'].isna(),
+        merged_with_bacsort['full_organism_name'],
         merged_with_bacsort['curated_organism_name']
     )
 

@@ -36,9 +36,12 @@ mash_dir = sys.argv[2]
 output_dir = sys.argv[3]
 max_sample_size = 1000
 do_not_sample = {'NoGenus'}
-merge_sets = {"Escherichia": {'Salmonella', 'Shigella', 'Citrobacter'},
-              'Macrococcus': {'Micrococcus'},
-              'Bacteroides': {'Parabacteroides'}}
+merge_sets = {
+    "Escherichia": {'Salmonella', 'Shigella', 'Citrobacter'},
+    'Macrococcus': {'Micrococcus'},
+    'Bacteroides': {'Parabacteroides'}
+    # 'Klebsiella': {'Raoultella'}
+}
 skip_genus = set().union(*merge_sets.values())
 
 taxon_data = pandas.read_parquet('data/taxon_info.pqt').rename_axis('taxid').fillna('NoGenus')
@@ -68,13 +71,15 @@ genus_reps = dict()
 
 for genus_name in genus_names:
     if genus_name in skip_genus:
+        print(f"Skipping {genus_name} for now.")
         continue
     # print(genus_name, file=sys.stderr)
     genus_strains = bacteria_strains[bacteria_strains['genus_name'] == genus_name]
     if genus_name in merge_sets.keys():
         for merge_genus in merge_sets[genus_name]:
-            print(f"Merging {merge_genus} into {genus_name}")
-            genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == merge_genus])
+            genus_set = bacteria_strains[bacteria_strains['genus_name'] == merge_genus]
+            # print(f"Merging {merge_genus} into {genus_name} (extra seqs: {genus_set.shape[0]}")
+            genus_strains = genus_strains.append(genus_set)
     # if genus_name == 'Escherichia':
     #     genus_strains = genus_strains.append(bacteria_strains[bacteria_strains['genus_name'] == 'Salmonella']).append(
     #         bacteria_strains[bacteria_strains['genus_name'] == 'Shigella']).append(
