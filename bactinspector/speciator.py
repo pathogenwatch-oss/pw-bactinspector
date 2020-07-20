@@ -25,11 +25,12 @@ def default_result() -> dict:
         "mashDistance": 1.0,
         "pValue": 0,
         "matchingHashes": '0/1000',
-        "confidence": 'None'
+        "confidence": 'None',
+        "library": 'None'
     }
 
 
-def build_pw_result(result_df, species_datafile):
+def build_pw_result(result_df, species_datafile, library):
     if result_df.shape[0] == 0:
         return default_result()
 
@@ -62,92 +63,115 @@ def build_pw_result(result_df, species_datafile):
             "mashDistance": float(result['top_hit_distance']),
             "pValue": float(result['top_hit_p_value']),
             "matchingHashes": result['top_hit_shared_hashes'],
-            "confidence": result['result']
+            "confidence": result['result'],
+            "source": library
         }
 
 
-fasta_path = sys.argv[1]
-libraries_path = sys.argv[2]
-num_best_matches = 20
-
-# print(f'Running {fasta_path} against {libraries_path}\n', file=sys.stderr)
-input_dir = os.path.dirname(fasta_path)
-fasta_file = os.path.basename(fasta_path)
-
-# Initial filter
-print(f'Running filter search', file=sys.stderr)
-filter_result = build_pw_result(commands.run_check_species(
-    AttributeDict({'distance_cutoff': 0.15,
-                   'fasta_file_pattern': fasta_file,
-                   'input_dir': input_dir,
-                   'output_dir': '/tmp/',
-                   'local_mash_and_info_file_prefix': f'{libraries_path}/filter.k21s1000',
-                   'stdout_summary': True,
-                   'num_best_matches': num_best_matches,
-                   'parallel_processes': 1,
-                   'mash_path': '',
-                   'allowed_variance': 0.1,
-                   'allowed_variance_rarer_species': 0.5
-                   })), 'data/taxon_info.pqt')
-
-genus = filter_result['genusName'].replace(' ', '_') if filter_result[
-                                                            'genusName'] != 'Unclassified' else 'NoGenus'
-
-# print(f"Genus: {genus}", file=sys.stderr)
-collected_groups = {"Escherichia": {'Escherichia', 'Salmonella', 'Shigella', 'Citrobacter'},
-                    'Macrococcus': {'Macrococcus', 'Micrococcus'},
-                    'Bacteroides': {'Bacteroides', 'Parabacteroides'},
-                    'Klebsiella': {'Klebsiella', 'Raoultella'}}
-
-if filter_result['superkingdomName'] != 'Bacteria' and filter_result['superkingdomName'] != 'Unclassified Sequences':
-    library, threshold = filter_result['superkingdomName'], 0.075
-elif genus in collected_groups['Escherichia']:
-    library, threshold = 'Escherichia', 0.05
-elif genus in collected_groups['Klebsiella']:
-    library, threshold, num_best_matches = 'Klebsiella', 0.05, 1
-elif genus in collected_groups['Macrococcus']:
-    library, threshold = 'Macrococcus', 0.05
-elif genus in collected_groups['Bacteroides']:
-    library, threshold = 'Bacteroides', 0.05
-elif genus == 'NoGenus':
-    library, threshold, num_best_matches = genus, 0.075, 20
-else:
-    library, threshold, num_best_matches = genus, 0.05, 20
-
-print(f'Library={library}, threshold={threshold}, num_best_matches={num_best_matches}', file=sys.stderr)
-
-library_file = f'{libraries_path}/{library}.k21s1000'
-
-results_df = commands.run_check_species(
-    AttributeDict({'distance_cutoff': threshold,
-                   'fasta_file_pattern': fasta_file,
-                   'input_dir': input_dir,
-                   'output_dir': '/tmp/',
-                   'local_mash_and_info_file_prefix': library_file,
-                   'stdout_summary': True,
-                   'num_best_matches': num_best_matches,
-                   'parallel_processes': 1,
-                   'mash_path': '',
-                   'allowed_variance': 0.1,
-                   'allowed_variance_rarer_species': 0.5
-                   }))
-
-# Check if we need to try the hit n hope.
-if results_df.iloc[0]['species'] == 'No significant matches':
-    results_df = commands.run_check_species(
-        AttributeDict({'distance_cutoff': threshold,
+def run_mass_search(num_best_matches=20):
+    # Initial filter
+    print(f'Running filter search', file=sys.stderr)
+    filter_result = build_pw_result(commands.run_check_species(
+        AttributeDict({'distance_cutoff': 0.15,
                        'fasta_file_pattern': fasta_file,
                        'input_dir': input_dir,
                        'output_dir': '/tmp/',
-                       'local_mash_and_info_file_prefix': f'{libraries_path}/NoGenus.k21s1000',
+                       'local_mash_and_info_file_prefix': f'{libraries_path}/filter.k21s1000',
                        'stdout_summary': True,
                        'num_best_matches': num_best_matches,
                        'parallel_processes': 1,
                        'mash_path': '',
                        'allowed_variance': 0.1,
                        'allowed_variance_rarer_species': 0.5
-                       })
-    )
+                       })), 'data/taxon_info.pqt', 'filter')
 
-json_result = build_pw_result(results_df, 'data/taxon_info.pqt')
+    genus = filter_result['genusName'].replace(' ', '_') if filter_result[
+                                                                'genusName'] != 'Unclassified' else 'NoGenus'
+
+    # print(f"Genus: {genus}", file=sys.stderr)
+    collected_groups = {"Escherichia": {'Escherichia', 'Salmonella', 'Shigella', 'Citrobacter'},
+                        'Macrococcus': {'Macrococcus', 'Micrococcus'},
+                        'Bacteroides': {'Bacteroides', 'Parabacteroides'},
+                        'Klebsiella': {'Klebsiella', 'Raoultella'}}
+
+    if filter_result['superkingdomName'] != 'Bacteria' and filter_result[
+        'superkingdomName'] != 'Unclassified Sequences':
+        library, threshold = filter_result['superkingdomName'], 0.075
+    elif genus in collected_groups['Escherichia']:
+        library, threshold = 'Escherichia', 0.05
+    elif genus in collected_groups['Klebsiella']:
+        library, threshold = 'Klebsiella', 0.05
+    elif genus in collected_groups['Macrococcus']:
+        library, threshold = 'Macrococcus', 0.05
+    elif genus in collected_groups['Bacteroides']:
+        library, threshold = 'Bacteroides', 0.05
+    elif genus == 'NoGenus':
+        library, threshold = genus, 0.075
+    else:
+        library, threshold = genus, 0.05
+
+    print(f'Library={library}, threshold={threshold}, num_best_matches={num_best_matches}', file=sys.stderr)
+
+    library_file = f'{libraries_path}/{library}.k21s1000'
+
+    results_df = commands.run_check_species(
+        AttributeDict({'distance_cutoff': threshold,
+                       'fasta_file_pattern': fasta_file,
+                       'input_dir': input_dir,
+                       'output_dir': '/tmp/',
+                       'local_mash_and_info_file_prefix': library_file,
+                       'stdout_summary': True,
+                       'num_best_matches': num_best_matches,
+                       'parallel_processes': 1,
+                       'mash_path': '',
+                       'allowed_variance': 0.1,
+                       'allowed_variance_rarer_species': 0.5
+                       }))
+
+    # Check if we need to try the hit n hope.
+    if results_df.iloc[0]['species'] == 'No significant matches':
+        results_df = commands.run_check_species(
+            AttributeDict({'distance_cutoff': threshold,
+                           'fasta_file_pattern': fasta_file,
+                           'input_dir': input_dir,
+                           'output_dir': '/tmp/',
+                           'local_mash_and_info_file_prefix': f'{libraries_path}/NoGenus.k21s1000',
+                           'stdout_summary': True,
+                           'num_best_matches': num_best_matches,
+                           'parallel_processes': 1,
+                           'mash_path': '',
+                           'allowed_variance': 0.1,
+                           'allowed_variance_rarer_species': 0.5
+                           })
+        )
+    return results_df, library
+
+
+fasta_path = sys.argv[1]
+libraries_path = sys.argv[2]
+
+# print(f'Running {fasta_path} against {libraries_path}\n', file=sys.stderr)
+input_dir = os.path.dirname(fasta_path)
+fasta_file = os.path.basename(fasta_path)
+
+# Curated library search
+print(f'Running curated library search', file=sys.stderr)
+species_assignment = commands.run_check_species(
+    AttributeDict({'distance_cutoff': 0.05,
+                   'fasta_file_pattern': fasta_file,
+                   'input_dir': input_dir,
+                   'output_dir': '/tmp/',
+                   'local_mash_and_info_file_prefix': f'{libraries_path}/Kleborate.k21s1000',
+                   'stdout_summary': True,
+                   'num_best_matches': 1,
+                   'parallel_processes': 1,
+                   'mash_path': '',
+                   'allowed_variance': 0.1,
+                   'allowed_variance_rarer_species': 0.5
+                   }))
+library = 'curated'
+if species_assignment.iloc[0]['species'] == 'No significant matches':
+    species_assignment, library = run_mass_search()
+
+json_result = build_pw_result(species_assignment, 'data/taxon_info.pqt', library)
 print(json.dumps(json_result), file=sys.stdout)

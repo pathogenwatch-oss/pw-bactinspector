@@ -70,5 +70,5 @@ merged = merged.assign(bioproject='', biosample='', refseq_category='', infraspe
 # merged['biosample'] = ''
 # merged['refseq_category'] = ''
 
-merged.to_parquet('kleborate_library/Klebsiella.k21s1000.species.pqt')
-merged.to_csv('kleborate_library/Klebsiella.k21s1000.species.csv')
+merged.to_parquet('kleborate_library/Kleborate.k21s1000.species.pqt')
+merged.to_csv('kleborate_library/Kleborate.k21s1000.species.csv')
