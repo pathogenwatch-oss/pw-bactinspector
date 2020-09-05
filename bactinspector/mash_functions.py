@@ -110,6 +110,7 @@ def get_most_frequent_species_match(matches, refseq_species_info, distance_cutof
 
         # get top hit of the most frequent species as measured by distance
         taxid_counts = best_match_species_df['species_taxid'].value_counts()
+        # print(best_match_species_df.to_csv(sys.stderr))
         if 1 == taxid_counts.size or taxid_counts[0] != taxid_counts[1]:
             most_frequent_species_taxid = taxid_counts.index[0]
             top_hit = best_match_species_df.loc[

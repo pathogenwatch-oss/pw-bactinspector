@@ -1,3 +1,4 @@
+import csv
 import re
 import sys
 
@@ -9,11 +10,32 @@ import pandas as pd
 
 
 def extract_organism_name(raw: str) -> str:
+    if raw == 'Salmonella_enterica/0001.fna.gz':
+        return 'Salmonella enterica subsp. enterica serovar Typhi'
     subspecies_matcher = re.compile(r'\ssubsp\s\w+$')
     raw = raw.split('/')[0].replace('_', ' ').replace('.fna', '')
     return subspecies_matcher.sub('', raw)
 
 
+def update_shigella_record(df, csv_row):
+    accession = csv_row['kleborate']
+    species_name = csv_row['species']
+    species_code = csv_row['taxid']
+    df.loc[df['accession'] == accession, 'genus_name'] = 'Shigella'
+    df.loc[df['accession'] == accession, 'genus_code'] = '620'
+    df.loc[df['accession'] == accession, 'species_name'] = species_name
+    df.loc[df['accession'] == accession, 'refseq_organism_name'] = species_name
+    df.loc[df['accession'] == accession, 'refseq_full_organism_name'] = species_name
+    df.loc[df['accession'] == accession, 'bacsort_organism_name'] = species_name
+    df.loc[df['accession'] == accession, 'curated_organism_name'] = species_name
+    df.loc[df['accession'] == accession, 'species_code'] = species_code
+    df.loc[df['accession'] == accession, 'taxid'] = species_code
+    df.loc[df['accession'] == accession, 'species_taxid'] = species_code
+    return df
+
+
+# Script start
+typhi_organism_name = 'Salmonella enterica subsp. enterica serovar Typhi'
 mash_info = {'curated_organism_name': [], 'accession': [], 'length': []}
 
 with open('kleborate_library/mash_info.txt', 'r') as fh:
@@ -32,13 +54,11 @@ with open('kleborate_library/mash_info.txt', 'r') as fh:
         mash_info['length'].append(int(data[1]))
 
 mash_df = pd.DataFrame.from_dict(mash_info)
-print(mash_df.shape[0], file=sys.stderr)
+print(f'{mash_df.shape[0]} rows in original mash_info.', file=sys.stderr)
 
 # Add taxon IDs
 taxon_info_df = pd.read_parquet('data/taxon_info.pqt')
-print(f'{taxon_info_df.shape[0]} rows in taxon_info df.', file=sys.stderr)
 merged = mash_df.merge(taxon_info_df, left_on='curated_organism_name', right_on='species_name', how='inner')
-print(f'{merged.shape[0]} rows in merged df.', file=sys.stderr)
 merged = merged.drop_duplicates()
 print(f'{merged.shape[0]} rows in merged df.', file=sys.stderr)
 
@@ -55,6 +75,51 @@ merged['refseq_full_organism_name'] = merged['curated_organism_name']
 merged['bacsort_organism_name'] = merged['curated_organism_name']
 merged = merged.assign(bioproject='', biosample='', refseq_category='', infraspecific_name='', assembly_level='',
                        asm_name='', submitter='', ftp_path='')
+
+# Add Typhi representative
+typhi_dict = {
+    'curated_organism_name': [typhi_organism_name],
+    'accession': ['Salmonella_enterica/0001.fna.gz'],
+    'GCF_accession': ['Salmonella_enterica/0001.fna.gz'],
+    'GCF_accession_without_version': ['Salmonella_enterica/0001.fna.gz'],
+    'filename': ['Salmonella_enterica/0001.fna.gz'],
+    'num_contigs': [1],
+    'info': '',
+    'refseq_organism_name': typhi_organism_name,
+    'refseq_full_organism_name': typhi_organism_name,
+    'bacsort_organism_name': typhi_organism_name,
+    'length': [5004298],
+    'taxid': ['90370'],
+    'species_taxid': ['28901'],
+    'species_code': ['28901'],
+    'species_name': ['Salmonella enterica'],
+    'genus_code': ['590'],
+    'genus_name': ['Salmonella'],
+    'superkingdom_code': ['2'],
+    'superkingdom_name': ['Bacteria'],
+}
+
+typhi_df = pd.DataFrame.from_dict(typhi_dict)
+
+sys.stderr.write(f'Before: {merged.shape[0]}')
+merged = merged.append(typhi_df, ignore_index=True)
+sys.stderr.write(f' after: {merged.shape[0]}\n')
+
+# Add Shigella fixes
+shigella_dict = list()
+with open('kleborate_library/shigella_links.csv') as sl_fh:
+    shigella_updates = csv.DictReader(sl_fh)
+    for shigella_update in shigella_updates:
+        merged = update_shigella_record(merged, shigella_update)
+
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'taxid'] = '90370'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'species_taxid'] = '28901'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'species_code'] = '28901'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'species_name'] = 'Salmonella enterica'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'genus_code'] = '590'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'genus_name'] = 'Salmonella'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'superkingdom_code'] = '2'
+# merged.loc[merged['curated_organism_name'] == typhi_organism_name, 'superkingdom_name'] = 'Bacteria'
 
 # merged = merged.drop(
 #     columns=['species_code', 'genus_name', 'genus_code', 'superkingdom_code', 'superkingdom_name']).rename(

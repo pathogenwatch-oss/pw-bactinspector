@@ -26,11 +26,11 @@ def default_result() -> dict:
         "pValue": 0,
         "matchingHashes": '0/1000',
         "confidence": 'None',
-        "library": 'None'
+        "source": 'None'
     }
 
 
-def build_pw_result(result_df, species_datafile, library):
+def build_pw_result(result_df, species_datafile, lib_name):
     if result_df.shape[0] == 0:
         return default_result()
 
@@ -64,7 +64,7 @@ def build_pw_result(result_df, species_datafile, library):
             "pValue": float(result['top_hit_p_value']),
             "matchingHashes": result['top_hit_shared_hashes'],
             "confidence": result['result'],
-            "source": library
+            "source": lib_name
         }
 
 
@@ -85,8 +85,7 @@ def run_mass_search(num_best_matches=20):
                        'allowed_variance_rarer_species': 0.5
                        })), 'data/taxon_info.pqt', 'filter')
 
-    genus = filter_result['genusName'].replace(' ', '_') if filter_result[
-                                                                'genusName'] != 'Unclassified' else 'NoGenus'
+    genus = filter_result['genusName'].replace(' ', '_') if filter_result['genusName'] != 'Unclassified' else 'NoGenus'
 
     # print(f"Genus: {genus}", file=sys.stderr)
     collected_groups = {"Escherichia": {'Escherichia', 'Salmonella', 'Shigella', 'Citrobacter'},
@@ -130,6 +129,7 @@ def run_mass_search(num_best_matches=20):
 
     # Check if we need to try the hit n hope.
     if results_df.iloc[0]['species'] == 'No significant matches':
+        library = 'Fallback'
         results_df = commands.run_check_species(
             AttributeDict({'distance_cutoff': threshold,
                            'fasta_file_pattern': fasta_file,
@@ -157,7 +157,7 @@ fasta_file = os.path.basename(fasta_path)
 # Curated library search
 print(f'Running curated library search', file=sys.stderr)
 species_assignment = commands.run_check_species(
-    AttributeDict({'distance_cutoff': 0.05,
+    AttributeDict({'distance_cutoff': 0.04,
                    'fasta_file_pattern': fasta_file,
                    'input_dir': input_dir,
                    'output_dir': '/tmp/',
@@ -169,9 +169,10 @@ species_assignment = commands.run_check_species(
                    'allowed_variance': 0.1,
                    'allowed_variance_rarer_species': 0.5
                    }))
-library = 'curated'
-if species_assignment.iloc[0]['species'] == 'No significant matches':
-    species_assignment, library = run_mass_search()
+tag = 'Curated'
+if species_assignment.iloc[0]['species'] == 'No significant matches' or species_assignment.iloc[0][
+      'species'] == 'Escherichia coli':
+    species_assignment, tag = run_mass_search()
 
-json_result = build_pw_result(species_assignment, 'data/taxon_info.pqt', library)
+json_result = build_pw_result(species_assignment, 'data/taxon_info.pqt', tag)
 print(json.dumps(json_result), file=sys.stdout)

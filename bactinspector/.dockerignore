@@ -8,4 +8,3 @@ speciator_build_notes/build_notes.txt
 convert_csv_to_parquet.py
 libraries/*.txt
 kleborate_library
- 
